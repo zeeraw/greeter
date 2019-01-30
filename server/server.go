@@ -2,10 +2,14 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"github.com/zeeraw/greeter/server/controllers"
 
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -19,14 +23,27 @@ const (
 	metricsInterface = "0.0.0.0:5117"
 )
 
+var (
+	errTimeout = status.Error(codes.DeadlineExceeded, "request took too long")
+)
+
 // Service represents the greeter service
 type Service struct{}
 
 // Hello responds to a greeting
 func (s *Service) Hello(ctx context.Context, req *HelloRequest) (*HelloResponse, error) {
-	return &HelloResponse{
-		Greeting: fmt.Sprintf("Hello %s", req.Name),
-	}, nil
+	controller := &controllers.Greetings{}
+	res := controller.Hello(req.Name)
+	defer res.Close()
+
+	select {
+	case err := <-res.ErrC:
+		return nil, status.Error(codes.Internal, err.Error())
+	case greeting := <-res.ResC:
+		return &HelloResponse{Greeting: greeting}, nil
+	case <-ctx.Done():
+		return nil, errTimeout
+	}
 }
 
 func main() {
