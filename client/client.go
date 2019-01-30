@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 func main() {
@@ -16,7 +17,10 @@ func main() {
 	}
 	log.Printf("Dialing GRPC on %s\n", conn.Target())
 	client := NewGreeterClient(conn)
-	res, err := client.Hello(context.Background(), &HelloRequest{
+	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(map[string]string{
+		"jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+	}))
+	res, err := client.Hello(ctx, &HelloRequest{
 		Name: flag.Arg(1),
 	})
 	if err != nil {

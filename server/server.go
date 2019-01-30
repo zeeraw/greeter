@@ -6,17 +6,16 @@ import (
 	"net"
 	"net/http"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	"github.com/zeeraw/greeter/server/controllers"
-
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/zeeraw/greeter/server/controllers"
 	context "golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -33,17 +32,22 @@ type Service struct{}
 // Hello responds to a greeting
 func (s *Service) Hello(ctx context.Context, req *HelloRequest) (*HelloResponse, error) {
 	controller := &controllers.Greetings{}
-	res := controller.Hello(req.Name)
-	defer res.Close()
-
-	select {
-	case err := <-res.ErrC:
-		return nil, status.Error(codes.Internal, err.Error())
-	case greeting := <-res.ResC:
-		return &HelloResponse{Greeting: greeting}, nil
-	case <-ctx.Done():
-		return nil, errTimeout
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.InvalidArgument, "metadata missing")
 	}
+	jwts := md.Get("jwt")
+	if len(jwts) < 1 {
+		return nil, status.Error(codes.Unauthenticated, "jwt missing")
+	}
+	greeting, err := controller.Hello(ctx, req.Name)
+	if err != nil {
+		switch e := err.(type) {
+		default:
+			return nil, status.Error(codes.Internal, e.Error())
+		}
+	}
+	return &HelloResponse{Greeting: greeting}, nil
 }
 
 func main() {
