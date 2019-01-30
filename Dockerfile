@@ -1,9 +1,8 @@
 FROM golang:1.11
 
-WORKDIR /go/src/app
+WORKDIR /go/src/github.com/zeeraw/greeter
 COPY . .
-RUN go get -d -v ./...
-RUN go install -v ./...
+RUN go install -v ./client ./server
 
 EXPOSE 50051
 EXPOSE 5117
