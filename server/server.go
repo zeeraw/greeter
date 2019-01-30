@@ -10,8 +10,10 @@ import (
 	"google.golang.org/grpc"
 )
 
+// Service represents the greeter service
 type Service struct{}
 
+// Hello responds to a greeting
 func (s *Service) Hello(ctx context.Context, req *HelloRequest) (*HelloResponse, error) {
 	return &HelloResponse{
 		Greeting: fmt.Sprintf("Hello %s", req.Name),
