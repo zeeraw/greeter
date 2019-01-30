@@ -8,6 +8,8 @@ import (
 
 	context "golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 // Service represents the greeter service
@@ -28,6 +30,11 @@ func main() {
 	}
 	server := grpc.NewServer()
 	RegisterGreeterServer(server, &Service{})
+
+	healthsrv := health.NewServer()
+	healthsrv.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
+	healthpb.RegisterHealthServer(server, healthsrv)
+
 	log.Printf("Serving GRPC on %s\n", listener.Addr())
 	log.Fatalln(server.Serve(listener))
 }
